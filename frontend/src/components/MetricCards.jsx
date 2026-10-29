@@ -33,7 +33,7 @@ export default function MetricCards({ metrics, selectedDate }) {
       color: 'text-cyan-400',
       bgColor: 'bg-cyan-500/10',
       borderColor: 'border-cyan-500/20',
-      detail: 'Includes embedded wind generation scope'
+      detail: 'Operational telemetry vs BM settlement difference'
     },
     {
       title: 'WAPE',

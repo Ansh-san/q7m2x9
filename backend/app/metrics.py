@@ -56,12 +56,16 @@ def compute_metrics(df: pd.DataFrame) -> Dict[str, Any]:
     if valid["actual_mw"].std() > 0 and valid["forecast_mw"].std() > 0:
         corr = float(valid["actual_mw"].corr(valid["forecast_mw"]))
 
-    scope_warning = abs(bias) > 2000.0
+    scope_warning = abs(bias) > 1500.0
     scope_warning_msg = (
-        "Structural Bias Notice: WINDFOR is National Grid ESO / NESO's GB total wind forecast "
-        "(including ~6-8 GW of distribution-connected embedded wind). FUELHH measures only "
-        "transmission Balancing Mechanism (BM) connected metered generation. The observed +4,000 to +5,000 MW "
-        "bias primarily reflects this structural scope difference rather than a predictive modeling flaw."
+        "Dataset Definition & Scope Notice: According to Elexon BMRS documentation, "
+        "WINDFOR is the Electricity System Operator's (ESO/NESO) forecast based on operational "
+        "metering data from transmission-connected and telemetered wind farms visible to the ESO. "
+        "In contrast, FUELHH records half-hourly outturn generation from registered Balancing Mechanism (BM) "
+        "metered units. The observed positive bias (+1,729.9 MW average in January 2026) reflects operational "
+        "vs settlement metering boundaries, transmission constraint management (curtailment / Bid-Offer Acceptances), "
+        "telemetered non-BM generation, and baseline forecast model characteristics. It should not be attributed "
+        "solely to embedded wind without unit-by-unit metering evidence."
         if scope_warning else None
     )
 

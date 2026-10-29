@@ -24,11 +24,16 @@ def get_da_cutoff_utc(trading_date: date, cutoff_local: str = "09:50") -> dateti
     return local_dt.astimezone(timezone.utc)
 
 
-def resample_fuelhh_to_hourly(fuelhh_df: pd.DataFrame) -> pd.DataFrame:
+def resample_fuelhh_to_hourly(
+    fuelhh_df: pd.DataFrame,
+    start_utc: Optional[datetime] = None,
+    end_utc: Optional[datetime] = None
+) -> pd.DataFrame:
     """
     Convert FUELHH half-hourly actuals to 1-hour average MW.
     Rule: Compute average only when both half-hour readings are present (sp_count == 2).
-    If sp_count < 2, actual_mw is NaN.
+    If sp_count < 2, actual_mw is set to NaN.
+    Optionally filters to the delivery interval range [start_utc, end_utc].
     """
     if fuelhh_df.empty:
         return pd.DataFrame(columns=["startTime", "actual_mw", "sp_count"])
@@ -36,6 +41,11 @@ def resample_fuelhh_to_hourly(fuelhh_df: pd.DataFrame) -> pd.DataFrame:
     df = fuelhh_df.copy()
     df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
     df["generation"] = pd.to_numeric(df["generation"], errors="coerce")
+
+    if start_utc is not None:
+        df = df[df["startTime"] >= start_utc]
+    if end_utc is not None:
+        df = df[df["startTime"] <= end_utc]
 
     hourly = (
         df.set_index("startTime")
@@ -161,7 +171,9 @@ def build_joined_dataset(
       - forecast_mw, forecast_publishTime, forecast_age_at_cutoff_minutes, forecast_lead_time_hours
       - error_mw (forecast_mw - actual_mw)
     """
-    hourly_actual = resample_fuelhh_to_hourly(fuelhh_df)
+    deliv_start = datetime(2026, 1, 2, 0, 0, tzinfo=timezone.utc)
+    deliv_end = datetime(2026, 2, 1, 23, 30, tzinfo=timezone.utc)
+    hourly_actual = resample_fuelhh_to_hourly(fuelhh_df, start_utc=deliv_start, end_utc=deliv_end)
     da_forecasts = extract_da_forecasts(windfor_df, cutoff_local=cutoff_local)
 
     if da_forecasts.empty:

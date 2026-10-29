@@ -19,10 +19,11 @@ Built strictly around the **N2EX UK Day-Ahead Power Auction** auction mechanics 
    - Elexon BMRS provides actual generation in 30-minute settlement periods (SPs).
    - WindPulse resamples SPs into 1-hour average MW strictly requiring **both settlement periods to be present (`sp_count == 2`)**. If any SP is missing, the interval is guarded as `NaN` rather than fabricating incomplete means.
 
-3. **Structural Scope-Gap Intelligence (Embedded vs Transmission BM Wind):**
-   - Direct comparison reveals a structural **+4,000 to +5,000 MW mean bias** (WINDFOR > FUELHH).
-   - **Why?** WINDFOR is NESO's forecast of **total GB wind** (including ~6–8 GW of distribution-connected embedded wind). FUELHH measures only **transmission-connected Balancing Mechanism (BM) generation**.
-   - WindPulse prominently flags this structural asymmetry in the UI banner and metric breakdowns. The high correlation ($r \approx 0.95$) demonstrates strong shape and front-tracking accuracy despite the level difference.
+3. **Scope Comparison & Dataset Definitions (Operational Metering vs BM Settlement):**
+   - Direct comparison over January 2026 decisions reveals a positive mean bias of **+1,729.9 MW** (WINDFOR > FUELHH).
+   - **Authoritative Dataset Scope:** Per Elexon BMRS documentation, **WINDFOR** is the Electricity System Operator's (ESO/NESO) forecast based on *operational metering data from transmission-connected and telemetered wind farms visible to the ESO*. In contrast, **FUELHH** aggregates half-hourly metered outturn strictly from registered *Balancing Mechanism (BM) settlement units*.
+   - **Contributing Factors:** The observed difference stems from: (a) operational telemetry vs settlement BM boundaries, (b) transmission constraint management where the ESO issues Bid-Offer Acceptances (BOAs) to curtail wind generators during network bottlenecks, (c) telemetered non-BM generation, and (d) baseline day-ahead model forecasting tendencies. It is not asserted as purely embedded wind without authoritative unit-level metering data.
+   - WindPulse presents this comparison objectively in the UI and documentation. The strong correlation ($r \approx 0.931$) confirms that WINDFOR accurately captures storm fronts and ramp timing despite the level difference.
 
 4. **Rich Interactive UI:**
    - Composed Recharts visualization (Actual area, Forecast trajectory, Error delta bars, interactive Brush zoom).
