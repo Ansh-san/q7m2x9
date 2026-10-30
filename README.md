@@ -1,177 +1,275 @@
-# WindPulse — UK Wind Generation Forecast Intelligence Dashboard
-### Gridbricks Full Stack Software Engineer Challenge | January 2026 Evaluation
+# WindPulse — UK Wind Generation Forecast Intelligence
 
-**WindPulse** is a full-stack energy-market analytics platform that evaluates the National Grid ESO / NESO Day-Ahead wind power forecasts (**WINDFOR**) against actual metered Balancing Mechanism wind generation (**FUELHH**).
+**Gridbricks | Full Stack Software Engineer Intern — Hiring Challenge**
 
-Built strictly around the **N2EX UK Day-Ahead Power Auction** auction mechanics for power purchase decisions made between **January 1 and January 31, 2026** (covering delivery intervals from **January 2, 2026 00:00 UTC through February 1, 2026 23:00 UTC**).
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel)](https://q7m2x9-nrok.vercel.app/)
+[![Backend](https://img.shields.io/badge/API-Render-purple)](https://q7m2x9.onrender.com/)
+[![Python](https://img.shields.io/badge/Python-FastAPI-blue?logo=python)](https://fastapi.tiangolo.com/)
 
----
+## Live Deployment
 
-## Key Features & Market Mechanics
+- **Application:** https://q7m2x9-nrok.vercel.app/
+- **Backend API:** https://q7m2x9.onrender.com/
+- **API Documentation:** https://q7m2x9.onrender.com/docs
+- **Health Check:** https://q7m2x9.onrender.com/api/health
 
-1. **Strict Day-Ahead (D-1) Causal Cutoff:**
-   - In the UK N2EX day-ahead market, bids are submitted on **trading day D** for physical delivery across 24 hourly intervals on **day D+1**.
-   - The official auction gate closure is **09:50 Europe/London** on the trading day.
-   - For every delivery interval, WindPulse deterministically selects the **latest forecast snapshot published on or before 09:50 local time on trading day D**. Any snapshot published after 09:50 is strictly excluded to prevent look-ahead bias.
-   - The cutoff is user-configurable directly in the UI (e.g. testing sensitivity at 09:00, 09:30, 09:50, 10:00).
+## 1. Overview
 
-2. **FUELHH Settlement Period Resampling:**
-   - Elexon BMRS provides actual generation in 30-minute settlement periods (SPs).
-   - WindPulse resamples SPs into 1-hour average MW strictly requiring **both settlement periods to be present (`sp_count == 2`)**. If any SP is missing, the interval is guarded as `NaN` rather than fabricating incomplete means.
+WindPulse is a full-stack energy analytics dashboard designed to help a UK electricity utility evaluate day-ahead wind generation forecasts against actual metered wind generation.
 
-3. **Scope Comparison & Dataset Definitions (Operational Metering vs BM Settlement):**
-   - Direct comparison over January 2026 decisions reveals a positive mean bias of **+1,729.9 MW** (WINDFOR > FUELHH).
-   - **Authoritative Dataset Scope:** Per Elexon BMRS documentation, **WINDFOR** is the Electricity System Operator's (ESO/NESO) forecast based on *operational metering data from transmission-connected and telemetered wind farms visible to the ESO*. In contrast, **FUELHH** aggregates half-hourly metered outturn strictly from registered *Balancing Mechanism (BM) settlement units*.
-   - **Contributing Factors:** The observed difference stems from: (a) operational telemetry vs settlement BM boundaries, (b) transmission constraint management where the ESO issues Bid-Offer Acceptances (BOAs) to curtail wind generators during network bottlenecks, (c) telemetered non-BM generation, and (d) baseline day-ahead model forecasting tendencies. It is not asserted as purely embedded wind without authoritative unit-level metering data.
-   - WindPulse presents this comparison objectively in the UI and documentation. The strong correlation ($r \approx 0.931$) confirms that WINDFOR accurately captures storm fronts and ramp timing despite the level difference.
+The application uses historical data from Elexon BMRS and reconstructs the forecast information available at the time of the day-ahead purchasing decision.
 
-4. **Rich Interactive UI:**
-   - Composed Recharts visualization (Actual area, Forecast trajectory, Error delta bars, interactive Brush zoom).
-   - Tooltip displaying snapshot publication timestamp, forecast age at gate closure (minutes), and lead time to physical delivery (hours).
-   - Day pill selector across all 31 delivery days + full month aggregate view.
-   - Daily mean bias distribution chart (click any bar to zoom into that day's 24 hours).
-   - CSV export for offline quant analysis.
+**Evaluation period:** January 1–31, 2026 (trading decisions).
 
----
+**Delivery period:** January 2–February 1, 2026.
 
-## Tech Stack
+**Total expected delivery intervals:** 744 hourly intervals.
 
-- **Frontend:** React 19, Vite, Tailwind CSS v3, Recharts, Lucide Icons
-- **Backend:** Python 3.12+, FastAPI, Pandas, HTTPX (Async), PyArrow
-- **Testing:** Pytest (11 unit & integration tests covering cutoff strictness, resampling, metrics, and API endpoints)
-- **Deployment:** Docker Compose, Vercel ready (`vercel.json`), Render ready
+## 2. Key Features
 
----
+### Day-Ahead Forecast Reconstruction
+- Configurable N2EX day-ahead cutoff, defaulting to 09:50 Europe/London.
+- Maps trading day D to physical delivery day D+1.
+- Selects the latest eligible forecast published at or before the trading-day cutoff.
+- Rejects forecasts published after the cutoff to prevent look-ahead bias.
+- Displays forecast publication time, forecast age at gate closure and lead time to delivery.
 
-## Project Structure
+### Actual Generation Processing
+- Retrieves FUELHH actual wind generation.
+- Converts 30-minute settlement periods into hourly average MW.
+- Requires both half-hourly readings to be present (`sp_count == 2`).
+- Flags incomplete intervals rather than using partial averages.
 
-```
-Gridbricks/
+### Forecast Accuracy Analysis
+The dashboard calculates:
+
+- **MAE:** Mean Absolute Error, in MW.
+- **RMSE:** Root Mean Squared Error, in MW.
+- **Bias:** Mean Forecast minus Actual, in MW.
+- **WAPE:** Weighted Absolute Percentage Error.
+- **Pearson Correlation:** Measures the relationship between forecast and actual generation profiles.
+
+### Interactive Analytics
+- Forecast versus actual generation time-series chart.
+- Daily mean bias and error analysis.
+- Delivery-date selector covering all 31 trading decisions.
+- Configurable gate-closure time.
+- Forecast publication and interval-level audit table.
+- CSV export for further analysis.
+
+## 3. Data Sources
+
+All analysis is restricted to the two Elexon datasets specified in the challenge.
+
+| Dataset | Purpose | Relevant Fields |
+|---|---|---|
+| FUELHH | Actual half-hourly generation | `fuelType`, `startTime`, `generation` |
+| WINDFOR | Wind generation forecasts | `startTime`, `publishTime`, `generation` |
+
+Official Elexon documentation:
+
+- [FUELHH API](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/FUELHH/stream)
+- [WINDFOR API](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/WINDFOR/stream)
+
+## 4. Forecast Selection and Processing Logic
+
+For each trading date D in January 2026:
+
+1. Calculate the day-ahead gate closure using 09:50 Europe/London.
+2. Identify delivery date D+1.
+3. Retrieve eligible WINDFOR forecast snapshots for the delivery intervals.
+4. Select the latest `publishTime` not exceeding the trading-day cutoff for each delivery interval.
+5. Resample the corresponding FUELHH actual readings from 30-minute to hourly resolution.
+6. Require two complete settlement-period readings for each hourly actual.
+7. Join forecast and actual values using their hourly `startTime`.
+8. Calculate forecast errors and aggregate accuracy metrics.
+
+The processing pipeline enforces a causal publication-time constraint: forecasts published after the decision cutoff cannot influence the reconstructed day-ahead forecast.
+
+## 5. Important Dataset Limitations
+
+WINDFOR and FUELHH have different measurement and reporting definitions.
+
+WINDFOR represents the system operator's wind-generation forecast based on operational metering, while FUELHH represents actual generation associated with registered Balancing Mechanism settlement units.
+
+Consequently, differences between the two series should not automatically be interpreted as pure forecasting-model error.
+
+The application makes this distinction visible in the dashboard. The observed comparison is useful for examining generation profiles, but the two datasets alone cannot isolate every source of measurement, metering or operational difference.
+
+**Procurement limitation:** Consumer demand data is outside the challenge scope. WindPulse therefore evaluates wind generation forecasts but does not calculate the utility's complete residual electricity procurement requirement.
+
+## 6. Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React, Vite |
+| Styling | Tailwind CSS |
+| Charts | Recharts |
+| Icons | Lucide |
+| Backend | Python, FastAPI |
+| Data Processing | Pandas, NumPy |
+| HTTP Client | HTTPX |
+| Data Cache | Parquet, PyArrow |
+| Testing | Pytest |
+| Containerization | Docker, Docker Compose |
+| Frontend Hosting | Vercel |
+| Backend Hosting | Render |
+| Version Control | Git, GitHub |
+
+## 7. Project Structure
+
+```text
+q7m2x9/
 ├── backend/
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── main.py           # FastAPI app, lifespan ingest cache & REST endpoints
-│   │   ├── ingest.py         # Async HTTPX stream fetchers for FUELHH & WINDFOR
-│   │   ├── transform.py      # D-1 cutoff logic, hourly resampling, paired dataset join
-│   │   └── metrics.py        # MAE, RMSE, Bias, WAPE, Pearson correlation, scope warnings
-│   ├── data/                 # Parquet cache directory
+│   │   ├── main.py
+│   │   ├── ingest.py
+│   │   ├── transform.py
+│   │   └── metrics.py
+│   ├── data/
 │   ├── tests/
-│   │   ├── test_transform.py # Tests for 09:50 cutoff strictness and sp_count rules
-│   │   ├── test_metrics.py   # Tests for KPI formulas and scope warnings
-│   │   └── test_api.py       # FastAPI TestClient endpoint integration tests
+│   │   ├── test_api.py
+│   │   ├── test_metrics.py
+│   │   └── test_transform.py
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Header.jsx           # App branding & live status
-│   │   │   ├── ScopeBanner.jsx      # Embedded vs BM wind market explanation
-│   │   │   ├── MetricCards.jsx      # MAE, RMSE, Bias, WAPE, Correlation, N
-│   │   │   ├── CutoffControl.jsx    # Configurable 09:50 gate-closure input
-│   │   │   ├── DaySelector.jsx      # 31-day pill navigation
-│   │   │   ├── TimeSeriesChart.jsx  # Recharts ComposedChart with custom tooltip
-│   │   │   ├── DailyErrorChart.jsx  # Daily bias breakdown chart
-│   │   │   └── DataTable.jsx        # Interval audit table with CSV export
-│   │   ├── api/client.js            # API client fetch wrappers
+│   │   ├── api/
 │   │   ├── App.jsx
-│   │   └── index.css
+│   │   └── main.jsx
 │   ├── Dockerfile
 │   ├── nginx.conf
 │   ├── package.json
-│   ├── tailwind.config.js
 │   └── vite.config.js
 ├── docker-compose.yml
 ├── vercel.json
+├── .gitignore
 └── README.md
 ```
 
----
+## 8. Running the Application Locally
 
-## Quickstart & Local Setup
+### Option A: Docker Compose (Recommended)
 
-### 1. Run with Docker Compose (Recommended)
+Requirements: Docker Desktop with Docker Compose.
 
-To spin up both backend and frontend in isolated containers:
+Clone the repository:
 
 ```bash
-docker-compose up --build
+git clone https://github.com/Ansh-san/q7m2x9.git
+cd q7m2x9
 ```
 
-- Frontend: `http://localhost:3000`
-- Backend API Docs: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/api/health`
-
----
-
-### 2. Run Manually (Local Development)
-
-#### Backend Setup:
+Build and start both services:
 
 ```bash
-# From workspace root
+docker compose up --build
+```
+
+Local URLs:
+
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
+- API documentation: http://localhost:8000/docs
+- Health check: http://localhost:8000/api/health
+
+### Option B: Manual Development Setup
+
+**Backend:**
+
+```bash
 cd backend
 
-# Install dependencies
-python -m pip install -r requirements.txt
-
-# Run unit tests
-python -m pytest tests -v
-
-# Start FastAPI dev server
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python -m venv .venv
 ```
 
-#### Frontend Setup:
+Activate the environment and install dependencies:
 
 ```bash
-# From workspace root
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Run the tests:
+
+```bash
+python -m pytest tests -v
+```
+
+Start the backend:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Frontend:**
+
+Open a separate terminal:
+
+```bash
 cd frontend
-
-# Install dependencies
 npm install --legacy-peer-deps
-
-# Start Vite dev server
 npm run dev
 ```
 
-Visit `http://localhost:5173` to access the dashboard.
+Open http://localhost:5173.
 
----
+## 9. Backend API Endpoints
 
-## Verification & Test Results
+| Endpoint | Description |
+|---|---|
+| `GET /api/health` | Backend and data-cache health |
+| `GET /api/timeseries?date=2026-01-15&cutoff=09:50` | Hourly forecast and actual generation |
+| `GET /api/metrics?cutoff=09:50` | Aggregate forecast accuracy metrics |
+| `GET /api/calendar?cutoff=09:50` | Delivery-day availability and snapshot information |
 
-All 11 unit and integration tests pass with 100% coverage across core energy-market transform rules:
+Interactive API documentation: https://q7m2x9.onrender.com/docs
+
+## 10. Testing and Verification
+
+The backend includes 11 unit and integration tests covering:
+
+- London timezone and UTC cutoff conversion.
+- FUELHH hourly resampling.
+- Missing half-hour settlement periods.
+- Forecast publication cutoff strictness.
+- Accuracy metric calculations.
+- Empty and incomplete datasets.
+- FastAPI health, time-series, metrics and calendar endpoints.
+
+The frontend production build was verified using:
 
 ```bash
-$ python -m pytest backend/tests -v
-backend/tests/test_api.py::test_health_endpoint PASSED
-backend/tests/test_api.py::test_timeseries_endpoint PASSED
-backend/tests/test_api.py::test_metrics_endpoint PASSED
-backend/tests/test_api.py::test_calendar_endpoint PASSED
-backend/tests/test_metrics.py::test_compute_metrics_accuracy PASSED
-backend/tests/test_metrics.py::test_scope_warning_large_bias PASSED
-backend/tests/test_metrics.py::test_empty_dataset_handling PASSED
-backend/tests/test_transform.py::test_cutoff_utc PASSED
-backend/tests/test_transform.py::test_resample_fuelhh_both_present PASSED
-backend/tests/test_transform.py::test_resample_fuelhh_missing_half_hour PASSED
-backend/tests/test_transform.py::test_da_forecast_cutoff_strictness PASSED
-
-======================= 11 passed in 5.09s =======================
+npm run build
 ```
 
+Docker Compose configuration was validated using:
+
+```bash
+docker compose config
+```
+
+## 11. AI Assistance Disclosure
+
+AI tools were used during development, in accordance with the hiring challenge instructions.
+
+- **Google Antigravity:** Assisted with application scaffolding, code generation, implementation, debugging and development workflow.
+- **ChatGPT:** Assisted with requirement analysis, domain research, architecture planning, technical review, debugging guidance and documentation preparation.
+
+AI-generated suggestions and code were reviewed and tested against the project requirements. Elexon BMRS was used as the specified external data source.
+
 ---
 
-## API Reference
-
-- `GET /api/health` — Status of feed ingest and cache records.
-- `GET /api/timeseries?date=YYYY-MM-DD&cutoff=HH:MM` — Hourly intervals with `actual_mw`, `forecast_mw`, `error_mw`, `forecast_publishTime`, `forecast_age_at_cutoff_minutes`, and `forecast_lead_time_hours`.
-- `GET /api/metrics?date=YYYY-MM-DD&cutoff=HH:MM` — MAE, RMSE, Bias, WAPE, Pearson correlation, and structural scope warning.
-- `GET /api/calendar?cutoff=HH:MM` — All 31 delivery days with forecast availability, daily means, and selected snapshot timestamps.
-
----
-
-## AI Assistance Disclosure
-
-In compliance with Gridbricks challenge requirements:
-- Code generation, initial API schema auditing, and boilerplate scaffolding were assisted by Google Antigravity Agentic AI.
-- All domain logic, N2EX gate closure alignment (trading day D vs delivery day D+1), Elexon BMRS endpoint parameters, FUELHH resampling criteria (`sp_count == 2`), and the structural embedded wind scope analysis were verified against live Elexon BMRS APIs and audited for engineering correctness without fabricated metrics.
+**Project:** WindPulse  
+**Repository:** https://github.com/Ansh-san/q7m2x9  
+**Live Application:** https://q7m2x9-nrok.vercel.app/  
+**Backend:** https://q7m2x9.onrender.com/  
+**Challenge:** Gridbricks Full Stack Software Engineer Intern
